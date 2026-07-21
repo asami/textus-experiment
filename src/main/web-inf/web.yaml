@@ -1,0 +1,6 @@
+apps:
+  - name: textus-experiment
+    path: /web/textus-experiment
+    kind: static-form
+    root: /web/textus-experiment
+    route: /web/{component}/textus-experiment

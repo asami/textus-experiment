@@ -1,0 +1,18 @@
+expose:
+  textus-experiment.experiment-management.start-experiment: protected
+  textus-experiment.experiment-management.get-experiment-run: public
+form:
+  textus-experiment.experiment-management.start-experiment:
+    enabled: true
+    successRedirect: /web/${component}/admin/entities/experiment-run/${result.id}
+    stayOnError: true
+    controls:
+      description:
+        type: textarea
+  textus-experiment.experiment-management.get-experiment-run:
+    enabled: true
+    successRedirect: /web/${component}/admin/entities/experiment-run
+    stayOnError: true
+admin:
+  entity.experiment-run:
+    totalCount: optional

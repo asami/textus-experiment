@@ -1,0 +1,608 @@
+# COMPONENT
+
+## Experiment
+
+### PACKAGE
+
+org.simplemodeling.textus.experiment
+
+### DESCRIPTION
+
+Textus Experiment defines reproducible experiment plans and aggregates their
+observations. It uses a named immutable corpus revision as common input, while
+Textus AI executes profile-resolved work and application components judge
+domain acceptance.
+
+# SERVICE
+
+## ExperimentManagement
+
+### DESCRIPTION
+
+Defines experiment arms, runs, and observations. An experiment can compare
+multiple treatments over the same corpus revision without owning corpus content
+or choosing a provider/model at an application operation boundary.
+
+### OPERATION
+
+#### defineExperiment
+
+##### DESCRIPTION
+
+Creates an experiment definition that references one immutable corpus revision
+and an application acceptance operation.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+DefineExperiment
+
+##### OUTPUT
+
+###### TYPE
+DefineExperimentResult
+
+##### IMPLEMENTATION
+entity-create
+
+##### ENTITY
+Experiment
+
+#### defineExperimentArm
+
+##### DESCRIPTION
+
+Adds one named treatment arm. The arm references an operator-managed execution
+plan rather than exposing provider, model, endpoint, or credential fields.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+DefineExperimentArm
+
+##### OUTPUT
+
+###### TYPE
+DefineExperimentArmResult
+
+##### IMPLEMENTATION
+entity-create
+
+##### ENTITY
+ExperimentArm
+
+#### activateExperiment
+
+##### DESCRIPTION
+
+Activates a draft experiment after at least one arm has been defined. The
+corpus revision and acceptance operation become fixed for subsequent runs.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+ActivateExperiment
+
+##### OUTPUT
+
+###### TYPE
+ActivateExperimentResult
+
+#### startExperiment
+
+##### DESCRIPTION
+
+Starts one run against the experiment's corpus revision. Execution and domain
+acceptance are connected later through normal assembled component operations.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+StartExperiment
+
+##### OUTPUT
+
+###### TYPE
+StartExperimentResult
+
+##### IMPLEMENTATION
+entity-create
+
+##### ENTITY
+ExperimentRun
+
+#### completeExperimentRun
+
+##### DESCRIPTION
+
+Moves a running experiment run to a terminal status and retains an optional
+sanitized completion-evidence reference.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+CompleteExperimentRun
+
+##### OUTPUT
+
+###### TYPE
+CompleteExperimentRunResult
+
+#### recordObservation
+
+##### DESCRIPTION
+
+Records one arm result for one corpus case using redacted execution and domain
+evidence references. Raw prompts, credentials, and provider payloads are not
+observation fields.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+RecordObservation
+
+##### OUTPUT
+
+###### TYPE
+RecordObservationResult
+
+##### IMPLEMENTATION
+entity-create
+
+##### ENTITY
+ExperimentObservation
+
+#### listExperimentRuns
+
+##### DESCRIPTION
+
+Lists experiment runs for operator inspection.
+
+##### TYPE
+
+QUERY
+
+##### INPUT
+
+###### TYPE
+ListExperimentRuns
+
+##### OUTPUT
+
+###### TYPE
+ListExperimentRunsResult
+
+##### IMPLEMENTATION
+entity-search
+
+##### ENTITY
+ExperimentRun
+
+#### listExperimentObservations
+
+##### DESCRIPTION
+
+Lists recorded observations. Aggregate reports are derived from these immutable
+facts rather than stored in the corpus.
+
+##### TYPE
+
+QUERY
+
+##### INPUT
+
+###### TYPE
+ListExperimentObservations
+
+##### OUTPUT
+
+###### TYPE
+ListExperimentObservationsResult
+
+##### IMPLEMENTATION
+entity-search
+
+##### ENTITY
+ExperimentObservation
+
+#### summarizeExperimentRun
+
+##### DESCRIPTION
+
+Derives deterministic outcome counts from the immutable observations retained
+for one experiment run.
+
+##### TYPE
+
+QUERY
+
+##### INPUT
+
+###### TYPE
+SummarizeExperimentRun
+
+##### OUTPUT
+
+###### TYPE
+SummarizeExperimentRunResult
+
+# ENTITY
+
+## Experiment
+
+### DESCRIPTION
+
+An experiment definition that keeps a corpus revision and application
+acceptance target stable across its runs.
+
+### Attribute
+
+| name                       | type     | multiplicity |
+|----------------------------+----------+--------------|
+| id                         | entityid | 1            |
+| experimentKey              | ExperimentKey | 1         |
+| name                       | name     | 1            |
+| corpusRevisionId           | entityid | 1            |
+| acceptanceOperation        | AcceptanceOperation | 1    |
+| description                | description | ?            |
+| status                     | ExperimentStatus | 1       |
+
+## ExperimentArm
+
+### DESCRIPTION
+
+One named treatment within an experiment. `executionPlanReference` is a
+runtime-owned plan reference, not a provider or model selector.
+
+### Attribute
+
+| name                   | type     | multiplicity |
+|------------------------+----------+--------------|
+| id                     | entityid | 1            |
+| experimentId           | entityid | 1            |
+| armKey                 | ExperimentArmKey | 1     |
+| name                   | name     | 1            |
+| executionPlanReference | ExecutionPlanReference | 1 |
+
+## ExperimentRun
+
+### DESCRIPTION
+
+One bounded execution of an experiment against its fixed corpus revision.
+
+### Attribute
+
+| name             | type     | multiplicity |
+|------------------+----------+--------------|
+| id               | entityid | 1            |
+| experimentId     | entityid | 1            |
+| corpusRevisionId | entityid | 1            |
+| status           | ExperimentRunStatus | 1       |
+| runReference     | ExperimentRunReference | 1    |
+| completionEvidenceReference | ExperimentEvidenceReference | ? |
+
+## ExperimentObservation
+
+### DESCRIPTION
+
+One arm outcome for one case. The outcome is domain-neutral; the referenced
+acceptance and execution evidence retain the application-specific detail.
+
+### Attribute
+
+| name                        | type     | multiplicity |
+|-----------------------------+----------+--------------|
+| id                          | entityid | 1            |
+| experimentRunId             | entityid | 1            |
+| experimentArmId             | entityid | 1            |
+| corpusCaseId                | entityid | 1            |
+| outcome                     | ExperimentOutcome | 1      |
+| acceptanceEvidenceReference | ExperimentEvidenceReference | ? |
+| executionEvidenceReference  | ExperimentEvidenceReference | ? |
+| metricReference             | ExperimentMetricReference | ?   |
+
+# DATATYPE
+
+## ExperimentKey
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## AcceptanceOperation
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExperimentStatus
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExperimentArmKey
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExecutionPlanReference
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExperimentRunStatus
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExperimentRunReference
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExperimentEvidenceReference
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExperimentOutcome
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ExperimentMetricReference
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+# VALUE
+
+## DefineExperiment
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name                | type     | multiplicity |
+|---------------------+----------+--------------|
+| name                | name     | 1            |
+| experimentKey       | ExperimentKey | 1         |
+| corpusRevisionId    | entityid | 1            |
+| acceptanceOperation | AcceptanceOperation | 1    |
+| description         | description | ?            |
+
+## ActivateExperiment
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name         | type     | multiplicity |
+|--------------+----------+--------------|
+| experimentId | entityid | 1            |
+
+## DefineExperimentArm
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name                   | type     | multiplicity |
+|------------------------+----------+--------------|
+| experimentId           | entityid | 1            |
+| armKey                 | ExperimentArmKey | 1     |
+| name                   | name     | 1            |
+| executionPlanReference | ExecutionPlanReference | 1 |
+
+## StartExperiment
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name             | type     | multiplicity |
+|------------------+----------+--------------|
+| experimentId     | entityid | 1            |
+| runReference     | ExperimentRunReference | 1 |
+
+## CompleteExperimentRun
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name                        | type     | multiplicity |
+|-----------------------------+----------+--------------|
+| experimentRunId             | entityid | 1            |
+| status                      | ExperimentRunStatus | 1 |
+| completionEvidenceReference | ExperimentEvidenceReference | ? |
+
+## RecordObservation
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name                        | type     | multiplicity |
+|-----------------------------+----------+--------------|
+| experimentRunId             | entityid | 1            |
+| experimentArmId             | entityid | 1            |
+| corpusCaseId                | entityid | 1            |
+| outcome                     | ExperimentOutcome | 1      |
+| acceptanceEvidenceReference | ExperimentEvidenceReference | ? |
+| executionEvidenceReference  | ExperimentEvidenceReference | ? |
+| metricReference             | ExperimentMetricReference | ?   |
+
+## ListExperimentRuns
+
+- input-kind :: QUERY
+
+### Attribute
+
+| name         | type     | multiplicity |
+|--------------+----------+--------------|
+| experimentId | entityid | ?            |
+| status       | ExperimentRunStatus | ? |
+| offset       | int      | ?            |
+| limit        | int      | ?            |
+
+## ListExperimentObservations
+
+- input-kind :: QUERY
+
+### Attribute
+
+| name            | type     | multiplicity |
+|-----------------+----------+--------------|
+| experimentRunId | entityid | 1            |
+| experimentArmId | entityid | ?            |
+| outcome         | ExperimentOutcome | ? |
+| offset          | int      | ?            |
+| limit           | int      | ?            |
+
+## SummarizeExperimentRun
+
+- input-kind :: QUERY
+
+### Attribute
+
+| name            | type     | multiplicity |
+|-----------------+----------+--------------|
+| experimentRunId | entityid | 1            |
+
+## DefineExperimentResult
+
+### Attribute
+
+| name | type     | multiplicity |
+|------+----------+--------------|
+| id   | entityid | 1            |
+| experimentKey | ExperimentKey | 1 |
+| name | name     | 1            |
+
+## ActivateExperimentResult
+
+### Attribute
+
+| name   | type     | multiplicity |
+|--------+----------+--------------|
+| id     | entityid | 1            |
+| status | ExperimentStatus | 1  |
+
+## DefineExperimentArmResult
+
+### Attribute
+
+| name   | type     | multiplicity |
+|--------+----------+--------------|
+| id     | entityid | 1            |
+| armKey | ExperimentArmKey | 1  |
+
+## StartExperimentResult
+
+### Attribute
+
+| name         | type     | multiplicity |
+|--------------+----------+--------------|
+| id           | entityid | 1            |
+| runReference | ExperimentRunReference | 1 |
+
+## CompleteExperimentRunResult
+
+### Attribute
+
+| name   | type     | multiplicity |
+|--------+----------+--------------|
+| id     | entityid | 1            |
+| status | ExperimentRunStatus | 1 |
+
+## RecordObservationResult
+
+### Attribute
+
+| name | type     | multiplicity |
+|------+----------+--------------|
+| id   | entityid | 1            |
+
+## ListExperimentRunsResult
+
+### Attribute
+
+| name  | type          | multiplicity |
+|-------+---------------+--------------|
+| items | ExperimentRun | *            |
+
+## ListExperimentObservationsResult
+
+### Attribute
+
+| name  | type                   | multiplicity |
+|-------+------------------------+--------------|
+| items | ExperimentObservation  | *            |
+
+## SummarizeExperimentRunResult
+
+### Attribute
+
+| name              | type     | multiplicity |
+|-------------------+----------+--------------|
+| experimentRunId   | entityid | 1            |
+| observationCount  | int      | 1            |
+| acceptedCount     | int      | 1            |
+| repairedCount     | int      | 1            |
+| confirmedCount    | int      | 1            |
+| escalatedCount    | int      | 1            |
+| rejectedCount     | int      | 1            |
+| failedCount       | int      | 1            |

@@ -1,0 +1,7 @@
+subsystem: textus-experiment
+version: 0.1.0-SNAPSHOT
+components:
+  - name: textus-experiment
+    version: 0.1.0-SNAPSHOT
+  - name: textus-corpus
+    version: 0.1.0-SNAPSHOT
