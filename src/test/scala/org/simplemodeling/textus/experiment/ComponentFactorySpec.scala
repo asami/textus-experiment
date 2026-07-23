@@ -1,6 +1,6 @@
 package org.simplemodeling.textus.experiment
 
-import java.time.Instant
+import java.time.{Clock, Instant}
 
 import org.goldenport.Consequence
 import org.goldenport.cncf.action.Action
@@ -9,7 +9,7 @@ import org.goldenport.cncf.context.{DataStoreContext, EntityStoreContext, Execut
 import org.goldenport.cncf.datastore.{DataStore, DataStoreSpace}
 import org.goldenport.cncf.entity.EntityStoreSpace
 import org.goldenport.cncf.subsystem.Subsystem
-import org.goldenport.configuration.{Configuration, ConfigurationTrace, ResolvedConfiguration}
+import org.goldenport.configuration.{Configuration, ConfigurationTrace, ConfigurationValue, ResolvedConfiguration}
 import org.goldenport.protocol.{Property, Request}
 import org.goldenport.protocol.operation.OperationResponse
 import org.goldenport.record.Record
@@ -21,7 +21,7 @@ import org.simplemodeling.textus.experiment.impl.{ComponentFactory, ExperimentPr
 
 /*
  * @since   Jul. 21, 2026
- * @version Jul. 21, 2026
+ * @version Jul. 23, 2026
  * @author  ASAMI, Tomoharu
  */
 final class ComponentFactorySpec extends AnyWordSpec with Matchers with GivenWhenThen {
@@ -43,6 +43,11 @@ final class ComponentFactorySpec extends AnyWordSpec with Matchers with GivenWhe
         "defineExperimentArm",
         "activateExperiment",
         "startExperiment",
+        "reserveComparisonReplay",
+        "consumeComparisonReplay",
+        "cancelComparisonReplay",
+        "expireComparisonReplayReservations",
+        "listComparisonReplayReservations",
         "completeExperimentRun",
         "recordObservation",
         "listExperimentRuns",
@@ -192,13 +197,215 @@ final class ComponentFactorySpec extends AnyWordSpec with Matchers with GivenWhe
       _failure_message(replacement) should include ("different immutable content")
       _failure_message(latearm) should include ("Draft")
     }
+
+    "reject comparison replay reservation without operator scheduler configuration" in {
+      Given("a running experiment without comparison replay configuration")
+      val component = _component()
+      given ExecutionContext = _with_privilege(component.logic.executionContext(), SecurityContext.Privilege.System)
+      val experiment = _record(_operation(component, "defineExperiment",
+        "experimentKey" -> "unconfigured-comparison-reservation",
+        "name" -> "Unconfigured comparison reservation",
+        "corpusRevisionId" -> _external_id("textus-corpus", "corpus_revision", "30"),
+        "acceptanceOperation" -> "Sanpomap.Evaluation.evaluateAiCandidate"
+      ))
+      val experimentid = experiment.getString("id").getOrElse(fail("experiment id missing"))
+      _record(_operation(component, "defineExperimentArm",
+        "experimentId" -> experimentid,
+        "armKey" -> "candidate",
+        "name" -> "Candidate",
+        "executionPlanReference" -> "textus-ai-plan://sanpomap/candidate"
+      ))
+      _record(_operation(component, "activateExperiment", "experimentId" -> experimentid))
+      val run = _record(_operation(component, "startExperiment",
+        "experimentId" -> experimentid,
+        "runReference" -> "unconfigured-run"
+      ))
+
+      When("the application asks for a reservation")
+      val failure = _operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> run.getString("id").getOrElse(fail("run id missing")),
+        "reservationKey" -> "unconfigured",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "1"
+      )
+
+      Then("the scheduler refuses before a replay route can run")
+      _failure_message(failure) should include ("comparison-replay.enabled=true is required")
+    }
+
+    "expire a zero-lifetime reservation without executing a replay" in {
+      Given("a running experiment whose operator lifetime is explicitly zero")
+      val component = _component(
+        Clock.systemUTC(),
+        "textus.experiment.comparison-replay.enabled" -> "true",
+        "textus.experiment.comparison-replay.maximum-replay-count" -> "1",
+        "textus.experiment.comparison-replay.maximum-budget-microunits" -> "1",
+        "textus.experiment.comparison-replay.reservation-ttl-seconds" -> "0"
+      )
+      given ExecutionContext = _with_privilege(component.logic.executionContext(), SecurityContext.Privilege.System)
+      val experiment = _record(_operation(component, "defineExperiment",
+        "experimentKey" -> "immediate-expiry-comparison-reservation",
+        "name" -> "Immediate expiry comparison reservation",
+        "corpusRevisionId" -> _external_id("textus-corpus", "corpus_revision", "32"),
+        "acceptanceOperation" -> "Sanpomap.Evaluation.evaluateAiCandidate"
+      ))
+      val experimentid = experiment.getString("id").getOrElse(fail("experiment id missing"))
+      _record(_operation(component, "defineExperimentArm",
+        "experimentId" -> experimentid,
+        "armKey" -> "candidate",
+        "name" -> "Candidate",
+        "executionPlanReference" -> "textus-ai-plan://sanpomap/candidate"
+      ))
+      _record(_operation(component, "activateExperiment", "experimentId" -> experimentid))
+      val run = _record(_operation(component, "startExperiment",
+        "experimentId" -> experimentid,
+        "runReference" -> "immediate-expiry-run"
+      ))
+      _record(_operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> run.getString("id").getOrElse(fail("run id missing")),
+        "reservationKey" -> "immediate-expiry",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "1"
+      ))
+
+      When("the scheduler expiration operation runs")
+      val result = _record(_operation(component, "expireComparisonReplayReservations"))
+
+      Then("the reservation is terminal before a provider route can start")
+      result.getInt("expiredCount") shouldBe Some(1)
+    }
+
+    "persist bounded comparison replay reservations through their lifecycle" in {
+      Given("an active experiment run and an operator-owned replay envelope")
+      val now = Instant.now()
+      val clock = Clock.fixed(now, java.time.ZoneOffset.UTC)
+      val component = _component(
+        clock,
+        "textus.execution.profile" -> "standard",
+        "textus.experiment.comparison-replay.enabled" -> "true",
+        "textus.experiment.comparison-replay.maximum-replay-count" -> "2",
+        "textus.experiment.comparison-replay.maximum-budget-microunits" -> "100",
+        "textus.experiment.comparison-replay.reservation-ttl-seconds" -> "1"
+      )
+      given ExecutionContext = _with_privilege(ExecutionContext.create(clock), SecurityContext.Privilege.System)
+      val experiment = _record(_operation(component, "defineExperiment",
+        "experimentKey" -> "comparison-reservation",
+        "name" -> "Comparison reservation",
+        "corpusRevisionId" -> _external_id("textus-corpus", "corpus_revision", "31"),
+        "acceptanceOperation" -> "Sanpomap.Evaluation.evaluateAiCandidate"
+      ))
+      val experimentid = experiment.getString("id").getOrElse(fail("experiment id missing"))
+      _record(_operation(component, "defineExperimentArm",
+        "experimentId" -> experimentid,
+        "armKey" -> "candidate",
+        "name" -> "Candidate",
+        "executionPlanReference" -> "textus-ai-plan://sanpomap/candidate"
+      ))
+      _record(_operation(component, "activateExperiment", "experimentId" -> experimentid))
+      val run = _record(_operation(component, "startExperiment",
+        "experimentId" -> experimentid,
+        "runReference" -> "comparison-run"
+      ))
+      val runid = run.getString("id").getOrElse(fail("run id missing"))
+      val otherrun = _record(_operation(component, "startExperiment",
+        "experimentId" -> experimentid,
+        "runReference" -> "comparison-other-run"
+      ))
+      val otherrunid = otherrun.getString("id").getOrElse(fail("other run id missing"))
+
+      When("two bounded reservations are admitted and one is cancelled")
+      val first = _record(_operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> runid,
+        "reservationKey" -> "first",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "40"
+      ))
+      val retry = _record(_operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> runid,
+        "reservationKey" -> "first",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "40"
+      ))
+      val crossrunreservation = _operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> otherrunid,
+        "reservationKey" -> "first",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "40"
+      )
+      val second = _record(_operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> runid,
+        "reservationKey" -> "second",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "60"
+      ))
+      val overcapacity = _operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> runid,
+        "reservationKey" -> "over-capacity",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "1"
+      )
+      val secondid = second.getString("id").getOrElse(fail("second reservation id missing"))
+      _record(_operation(component, "cancelComparisonReplay",
+        "reservationId" -> secondid,
+        "cancellationEvidenceReference" -> "sanpomap-evidence://comparison/cancelled"
+      ))
+      val replacement = _record(_operation(component, "reserveComparisonReplay",
+        "experimentRunId" -> runid,
+        "reservationKey" -> "replacement",
+        "replayCount" -> "1",
+        "budgetMicrounits" -> "60"
+      ))
+
+      Then("idempotence is preserved and only active or consumed capacity blocks admission")
+      first.getString("id") shouldBe retry.getString("id")
+      _failure_message(crossrunreservation) should include ("different immutable content")
+      _failure_message(overcapacity) should include ("per-run operator maximum")
+      replacement.getString("status") shouldBe Some("Reserved")
+
+      When("another experiment run attempts to consume the reservation")
+      val firstid = first.getString("id").getOrElse(fail("first reservation id missing"))
+      val crossrunconsume = _operation(component, "consumeComparisonReplay",
+        "experimentRunId" -> otherrunid,
+        "reservationId" -> firstid,
+        "observationReference" -> "sanpomap-evidence://comparison/cross-run-observation"
+      )
+
+      Then("the reservation remains bound to its owning experiment run")
+      _failure_message(crossrunconsume) should include ("does not belong to experiment run")
+
+      When("the owning experiment run consumes the reservation")
+      _record(_operation(component, "consumeComparisonReplay",
+        "experimentRunId" -> runid,
+        "reservationId" -> firstid,
+        "observationReference" -> "sanpomap-evidence://comparison/observation-1"
+      ))
+      val conflictingconsume = _operation(component, "consumeComparisonReplay",
+        "experimentRunId" -> runid,
+        "reservationId" -> firstid,
+        "observationReference" -> "sanpomap-evidence://comparison/other-observation"
+      )
+      val reservations = _record(_operation(component, "listComparisonReplayReservations",
+        "experimentRunId" -> runid
+      )).getVector("items").getOrElse(Vector.empty).collect { case value: Record => value }
+
+      Then("consumption is single-use and durable audit state retains each lifecycle disposition")
+      _failure_message(conflictingconsume) should include ("already consumed")
+      reservations.flatMap(_.getString("status")).toSet shouldBe Set("Consumed", "Cancelled", "Reserved")
+    }
   }
 
-  private def _component(): ExperimentPrimaryComponent = {
-    val base = ExecutionContext.create()
+  private def _component(
+    clock: Clock = Clock.systemUTC(),
+    properties: (String, String)*
+  ): ExperimentPrimaryComponent = {
+    val configuration = Configuration(
+      properties.map { case (key, value) => key -> ConfigurationValue.StringValue(value) }.toMap
+    )
+    val resolvedconfiguration = ResolvedConfiguration(configuration, ConfigurationTrace.empty)
+    val base = ExecutionContext.create(clock)
     val datastorespace = new DataStoreSpace().addDataStore(DataStore.inMemorySearchable())
     val entitystorespace = EntityStoreSpace.create(
-      ResolvedConfiguration(Configuration.empty, ConfigurationTrace.empty)
+      resolvedconfiguration
     )
     val scope = ScopeContext.Instance(ScopeContext.Core(
       kind = ScopeKind.Subsystem,
@@ -212,7 +419,7 @@ final class ComponentFactorySpec extends AnyWordSpec with Matchers with GivenWhe
     val subsystem = new Subsystem(
       name = "textus-experiment-spec",
       scopeContext = Some(scope),
-      configuration = ResolvedConfiguration(Configuration.empty, ConfigurationTrace.empty)
+      configuration = resolvedconfiguration
     )
     val bundle = new ComponentFactory().create(ComponentCreate(subsystem, ComponentOrigin.Main))
     subsystem.add(bundle.participants)

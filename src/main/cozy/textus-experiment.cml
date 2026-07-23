@@ -127,6 +127,126 @@ entity-create
 ##### ENTITY
 ExperimentRun
 
+#### reserveComparisonReplay
+
+##### DESCRIPTION
+
+Reserves one bounded comparison replay against a running experiment run. The
+operator-owned Experiment configuration supplies the per-run capacity and
+reservation lifetime. The operation accepts no provider, model, endpoint,
+credential, tool, prompt, or response selection.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+ReserveComparisonReplay
+
+##### OUTPUT
+
+###### TYPE
+ReserveComparisonReplayResult
+
+##### IMPLEMENTATION
+entity-create
+
+##### ENTITY
+ComparisonReplayReservation
+
+#### consumeComparisonReplay
+
+##### DESCRIPTION
+
+Consumes one unexpired reservation exactly once after the application has
+persisted the comparison observation. The observation reference is opaque and
+must not contain provider payload data.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+ConsumeComparisonReplay
+
+##### OUTPUT
+
+###### TYPE
+ConsumeComparisonReplayResult
+
+#### cancelComparisonReplay
+
+##### DESCRIPTION
+
+Cancels an unconsumed reservation before its replay is executed. Cancelled
+capacity becomes available for a later reservation in the same run.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+CancelComparisonReplay
+
+##### OUTPUT
+
+###### TYPE
+CancelComparisonReplayResult
+
+#### expireComparisonReplayReservations
+
+##### DESCRIPTION
+
+Transitions outstanding reservations whose component-owned expiration instant
+has passed to `Expired`. A scheduler invokes this operation without supplying
+its own clock or a provider route.
+
+##### TYPE
+
+COMMAND
+
+##### INPUT
+
+###### TYPE
+ExpireComparisonReplayReservations
+
+##### OUTPUT
+
+###### TYPE
+ExpireComparisonReplayReservationsResult
+
+#### listComparisonReplayReservations
+
+##### DESCRIPTION
+
+Lists persisted comparison replay reservations for operator audit.
+
+##### TYPE
+
+QUERY
+
+##### INPUT
+
+###### TYPE
+ListComparisonReplayReservations
+
+##### OUTPUT
+
+###### TYPE
+ListComparisonReplayReservationsResult
+
+##### IMPLEMENTATION
+entity-search
+
+##### ENTITY
+ComparisonReplayReservation
+
 #### completeExperimentRun
 
 ##### DESCRIPTION
@@ -305,6 +425,28 @@ One bounded execution of an experiment against its fixed corpus revision.
 | runReference     | ExperimentRunReference | 1    |
 | completionEvidenceReference | ExperimentEvidenceReference | ? |
 
+## ComparisonReplayReservation
+
+### DESCRIPTION
+
+An auditable operator-bounded allocation of comparison replay capacity for one
+experiment run. It does not identify an AI provider or route.
+
+### Attribute
+
+| name                  | type   | multiplicity |
+|-----------------------+--------+--------------|
+| id                    | entityid | 1          |
+| experimentRunId       | entityid | 1          |
+| reservationKey        | ComparisonReplayReservationKey | 1 |
+| replayCount           | int    | 1            |
+| budgetMicrounits      | long   | 1            |
+| status                | ComparisonReplayReservationStatus | 1 |
+| reservedAt            | instant | 1           |
+| expiresAt             | instant | 1           |
+| observationReference  | ExperimentEvidenceReference | ? |
+| cancellationEvidenceReference | ExperimentEvidenceReference | ? |
+
 ## ExperimentObservation
 
 ### DESCRIPTION
@@ -376,6 +518,22 @@ acceptance and execution evidence retain the application-specific detail.
 | value | string | 1            |
 
 ## ExperimentRunReference
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ComparisonReplayReservationKey
+
+### Attribute
+
+| name  | type   | multiplicity |
+|-------+--------+--------------|
+| value | string | 1            |
+
+## ComparisonReplayReservationStatus
 
 ### Attribute
 
@@ -456,6 +614,59 @@ acceptance and execution evidence retain the application-specific detail.
 |------------------+----------+--------------|
 | experimentId     | entityid | 1            |
 | runReference     | ExperimentRunReference | 1 |
+
+## ReserveComparisonReplay
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name            | type   | multiplicity |
+|-----------------+--------+--------------|
+| experimentRunId | entityid | 1          |
+| reservationKey  | ComparisonReplayReservationKey | 1 |
+| replayCount     | int    | 1            |
+| budgetMicrounits | long  | 1            |
+
+## ConsumeComparisonReplay
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name                 | type   | multiplicity |
+|----------------------+--------+--------------|
+| experimentRunId      | entityid | 1          |
+| reservationId        | entityid | 1          |
+| observationReference | ExperimentEvidenceReference | 1 |
+
+## CancelComparisonReplay
+
+- input-kind :: COMMAND
+
+### Attribute
+
+| name                          | type   | multiplicity |
+|-------------------------------+--------+--------------|
+| reservationId                 | entityid | 1          |
+| cancellationEvidenceReference | ExperimentEvidenceReference | ? |
+
+## ExpireComparisonReplayReservations
+
+- input-kind :: COMMAND
+
+## ListComparisonReplayReservations
+
+- input-kind :: QUERY
+
+### Attribute
+
+| name            | type   | multiplicity |
+|-----------------+--------+--------------|
+| experimentRunId | entityid | ?          |
+| status          | ComparisonReplayReservationStatus | ? |
+| offset          | int    | ?            |
+| limit           | int    | ?            |
 
 ## CompleteExperimentRun
 
@@ -558,6 +769,52 @@ acceptance and execution evidence retain the application-specific detail.
 |--------------+----------+--------------|
 | id           | entityid | 1            |
 | runReference | ExperimentRunReference | 1 |
+
+## ReserveComparisonReplayResult
+
+### Attribute
+
+| name          | type   | multiplicity |
+|---------------+--------+--------------|
+| id            | entityid | 1          |
+| status        | ComparisonReplayReservationStatus | 1 |
+| expiresAt     | instant | 1            |
+| replayCount   | int    | 1            |
+| budgetMicrounits | long | 1           |
+
+## ConsumeComparisonReplayResult
+
+### Attribute
+
+| name   | type   | multiplicity |
+|--------+--------+--------------|
+| id     | entityid | 1          |
+| status | ComparisonReplayReservationStatus | 1 |
+
+## CancelComparisonReplayResult
+
+### Attribute
+
+| name   | type   | multiplicity |
+|--------+--------+--------------|
+| id     | entityid | 1          |
+| status | ComparisonReplayReservationStatus | 1 |
+
+## ExpireComparisonReplayReservationsResult
+
+### Attribute
+
+| name         | type | multiplicity |
+|--------------+------+--------------|
+| expiredCount | int  | 1            |
+
+## ListComparisonReplayReservationsResult
+
+### Attribute
+
+| name  | type                         | multiplicity |
+|-------+------------------------------+--------------|
+| items | ComparisonReplayReservation  | *            |
 
 ## CompleteExperimentRunResult
 

@@ -1,5 +1,6 @@
 package org.simplemodeling.textus.experiment.impl
 
+import java.time.Instant
 import cats.implicits.*
 import org.goldenport.Consequence
 import org.goldenport.cncf.action.{ActionCall, FunctionalActionCall}
@@ -11,14 +12,14 @@ import org.goldenport.protocol.operation.OperationResponse
 import org.goldenport.record.Record
 import org.simplemodeling.model.datatype.EntityId
 import org.simplemodeling.textus.experiment.ExperimentComponent
-import org.simplemodeling.textus.experiment.entity.{Experiment, ExperimentArm, ExperimentObservation, ExperimentRun}
-import org.simplemodeling.textus.experiment.entity.create.{Experiment as ExperimentCreate, ExperimentArm as ExperimentArmCreate, ExperimentObservation as ExperimentObservationCreate, ExperimentRun as ExperimentRunCreate}
-import org.simplemodeling.textus.experiment.entity.update.{Experiment as ExperimentUpdate, ExperimentRun as ExperimentRunUpdate}
-import org.simplemodeling.textus.experiment.datatype.{ExperimentEvidenceReference, ExperimentRunStatus, ExperimentStatus}
+import org.simplemodeling.textus.experiment.entity.{ComparisonReplayReservation, Experiment, ExperimentArm, ExperimentObservation, ExperimentRun}
+import org.simplemodeling.textus.experiment.entity.create.{ComparisonReplayReservation as ComparisonReplayReservationCreate, Experiment as ExperimentCreate, ExperimentArm as ExperimentArmCreate, ExperimentObservation as ExperimentObservationCreate, ExperimentRun as ExperimentRunCreate}
+import org.simplemodeling.textus.experiment.entity.update.{ComparisonReplayReservation as ComparisonReplayReservationUpdate, Experiment as ExperimentUpdate, ExperimentRun as ExperimentRunUpdate}
+import org.simplemodeling.textus.experiment.datatype.{ComparisonReplayReservationStatus, ExperimentEvidenceReference, ExperimentRunStatus, ExperimentStatus}
 
 /*
  * @since   Jul. 21, 2026
- * @version Jul. 21, 2026
+ * @version Jul. 23, 2026
  * @author  ASAMI, Tomoharu
  */
 final class ComponentFactory extends Component.BundleFactory {
@@ -77,6 +78,21 @@ final class DefaultExperimentManagementServiceFactory extends ExperimentComponen
   override def createStartExperimentActionCall(core: ActionCall.Core, action: StartExperiment): StartExperimentActionCall =
     StartExperimentActionCallImpl(core, action)
 
+  override def createReserveComparisonReplayActionCall(core: ActionCall.Core, action: ReserveComparisonReplay): ReserveComparisonReplayActionCall =
+    ReserveComparisonReplayActionCallImpl(core, action)
+
+  override def createConsumeComparisonReplayActionCall(core: ActionCall.Core, action: ConsumeComparisonReplay): ConsumeComparisonReplayActionCall =
+    ConsumeComparisonReplayActionCallImpl(core, action)
+
+  override def createCancelComparisonReplayActionCall(core: ActionCall.Core, action: CancelComparisonReplay): CancelComparisonReplayActionCall =
+    CancelComparisonReplayActionCallImpl(core, action)
+
+  override def createExpireComparisonReplayReservationsActionCall(core: ActionCall.Core, action: ExpireComparisonReplayReservations): ExpireComparisonReplayReservationsActionCall =
+    ExpireComparisonReplayReservationsActionCallImpl(core, action)
+
+  override def createListComparisonReplayReservationsActionCall(core: ActionCall.Core, action: ListComparisonReplayReservations): ListComparisonReplayReservationsActionCall =
+    ListComparisonReplayReservationsActionCallImpl(core, action)
+
   override def createCompleteExperimentRunActionCall(core: ActionCall.Core, action: CompleteExperimentRun): CompleteExperimentRunActionCall =
     CompleteExperimentRunActionCallImpl(core, action)
 
@@ -108,6 +124,9 @@ private trait ExperimentActionSupport {
 
   protected final def all_runs: ExecUowM[Vector[ExperimentRun]] =
     _all[ExperimentRun](org.simplemodeling.textus.experiment.entity.query.ExperimentRun.collectionId)
+
+  protected final def all_reservations: ExecUowM[Vector[ComparisonReplayReservation]] =
+    _all[ComparisonReplayReservation](org.simplemodeling.textus.experiment.entity.query.ComparisonReplayReservation.collectionId)
 
   protected final def all_observations: ExecUowM[Vector[ExperimentObservation]] =
     _all[ExperimentObservation](org.simplemodeling.textus.experiment.entity.query.ExperimentObservation.collectionId)
@@ -147,6 +166,28 @@ private trait ExperimentActionSupport {
       .upsertSingle("id", value.id.value)
       .upsertSingle("experimentId", value.experimentId.value)
       .upsertSingle("corpusRevisionId", value.corpusRevisionId.value)
+
+  protected final def reservation_record(value: ComparisonReplayReservation): Record =
+    value.toRecord()
+      .upsertSingle("id", value.id.value)
+      .upsertSingle("experimentRunId", value.experimentRunId.value)
+
+  protected final def expire_reservations(
+    values: Vector[ComparisonReplayReservation],
+    now: Instant
+  ): ExecUowM[Vector[ComparisonReplayReservation]] =
+    values.foldLeft(exec_pure(Vector.empty[ComparisonReplayReservation])) { (z, current) =>
+      for {
+        resolved <- z
+        updated <- if (current.status.value == "Reserved" && !current.expiresAt.isAfter(now))
+          for {
+            patch <- exec_from(ComparisonReplayReservationUpdate.createC(Record.dataAuto("status" -> "Expired")))
+            _ <- entity_update(current.id, patch)
+          } yield current.copy(status = ComparisonReplayReservationStatus("Expired"))
+        else
+          exec_pure(current)
+      } yield resolved :+ updated
+    }
 
   protected final def observation_record(value: ExperimentObservation): Record =
     value.toRecord()
@@ -300,6 +341,239 @@ private final case class StartExperimentActionCallImpl(
 
   private def _response(id: EntityId, reference: String): OperationResponse =
     OperationResponse(Record.dataAuto("id" -> id.value, "runReference" -> reference))
+}
+
+private final case class ReserveComparisonReplayActionCallImpl(
+  core: ActionCall.Core,
+  override val action: ExperimentComponent.ExperimentManagementService.ReserveComparisonReplay
+) extends ExperimentComponent.ExperimentManagementService.ReserveComparisonReplayActionCall
+    with ExperimentActionSupport {
+  protected def build_Program: ExecUowM[OperationResponse] =
+    for {
+      policy <- exec_from(ComparisonReplayReservationSupport.policy(core))
+      runid <- exec_from(required_entity_id(action.record, "experimentRunId"))
+      run <- entity_load_option_internal[ExperimentRun](runid)
+      currentrun <- exec_from(run.map(Consequence.success).getOrElse(
+        Consequence.entityNotFound(s"Experiment run '$runid' does not exist.")
+      ))
+      _ <- if (currentrun.status.value == "Running") exec_pure(())
+        else exec_from(Consequence.stateConflict("Comparison replay requires a Running experiment run."))
+      now = execution_clock.instant()
+      input <- exec_from(ComparisonReplayReservationCreate.createC(action.record
+        .upsertSingle("status", "Reserved")
+        .upsertSingle("reservedAt", now.toString)
+        .upsertSingle("expiresAt", now.plusSeconds(policy.reservationTtlSeconds).toString)
+      ))
+      _ <- if (input.reservationKey.value.trim.nonEmpty) exec_pure(())
+        else exec_from(Consequence.operationInvalid("reservationKey must not be empty"))
+      _ <- if (input.replayCount > 0) exec_pure(())
+        else exec_from(Consequence.operationInvalid("replayCount must be a positive integer"))
+      _ <- if (input.budgetMicrounits > 0) exec_pure(())
+        else exec_from(Consequence.operationInvalid("budgetMicrounits must be a positive long"))
+      reservations <- all_reservations
+      resolved <- expire_reservations(reservations, now)
+      existing = resolved.find(_.reservationKey == input.reservationKey)
+      response <- existing match {
+        case Some(value) if _same(value, input) && value.status.value == "Reserved" =>
+          exec_pure(_response(value))
+        case Some(value) =>
+          exec_from(Consequence.stateConflict(
+            s"Comparison replay reservation '${value.reservationKey.value}' is already terminal or has different immutable content."
+          ))
+        case None =>
+          val allocated = resolved.filter(x =>
+            x.experimentRunId == input.experimentRunId && Set("Reserved", "Consumed").contains(x.status.value)
+          )
+          val replaycount = allocated.map(_.replayCount.toLong).sum + input.replayCount
+          val budget = allocated.map(_.budgetMicrounits).sum + input.budgetMicrounits
+          if (replaycount > policy.maximumReplayCount)
+            exec_from(Consequence.configurationInvalid(
+              s"Comparison replay count exceeds per-run operator maximum: $replaycount > ${policy.maximumReplayCount}"
+            ))
+          else if (budget > policy.maximumBudgetMicrounits)
+            exec_from(Consequence.configurationInvalid(
+              s"Comparison replay budget exceeds per-run operator maximum: $budget > ${policy.maximumBudgetMicrounits}"
+            ))
+          else
+            entity_create(input).map(created => _response(ComparisonReplayReservation(
+              id = created.id,
+              experimentRunId = input.experimentRunId,
+              reservationKey = input.reservationKey,
+              replayCount = input.replayCount,
+              budgetMicrounits = input.budgetMicrounits,
+              status = input.status,
+              reservedAt = input.reservedAt,
+              expiresAt = input.expiresAt,
+              observationReference = input.observationReference,
+              cancellationEvidenceReference = input.cancellationEvidenceReference
+            )))
+      }
+    } yield response
+
+  private def _same(current: ComparisonReplayReservation, input: ComparisonReplayReservationCreate): Boolean =
+    current.experimentRunId == input.experimentRunId &&
+      current.replayCount == input.replayCount &&
+      current.budgetMicrounits == input.budgetMicrounits
+
+  private def _response(value: ComparisonReplayReservation): OperationResponse =
+    OperationResponse(Record.dataAuto(
+      "id" -> value.id.value,
+      "status" -> value.status.value,
+      "expiresAt" -> value.expiresAt.toString,
+      "replayCount" -> value.replayCount,
+      "budgetMicrounits" -> value.budgetMicrounits
+    ))
+}
+
+private final case class ConsumeComparisonReplayActionCallImpl(
+  core: ActionCall.Core,
+  override val action: ExperimentComponent.ExperimentManagementService.ConsumeComparisonReplay
+) extends ExperimentComponent.ExperimentManagementService.ConsumeComparisonReplayActionCall
+    with ExperimentActionSupport {
+  protected def build_Program: ExecUowM[OperationResponse] =
+    for {
+      runid <- exec_from(required_entity_id(action.record, "experimentRunId"))
+      id <- exec_from(required_entity_id(action.record, "reservationId"))
+      reference <- exec_from(ComparisonReplayReservationSupport.requiredOpaqueReference(action.record, "observationReference"))
+      reservation <- entity_load_option_internal[ComparisonReplayReservation](id)
+      current <- exec_from(reservation.map(Consequence.success).getOrElse(
+        Consequence.entityNotFound(s"Comparison replay reservation '$id' does not exist.")
+      ))
+      _ <- if (current.experimentRunId == runid) exec_pure(())
+      else exec_from(Consequence.stateConflict(
+        s"Comparison replay reservation '$id' does not belong to experiment run '$runid'."
+      ))
+      response <- current.status.value match {
+        case "Reserved" if !current.expiresAt.isAfter(execution_clock.instant()) =>
+          for {
+            patch <- exec_from(ComparisonReplayReservationUpdate.createC(Record.dataAuto("status" -> "Expired")))
+            _ <- entity_update(current.id, patch)
+            response <- exec_from(Consequence.stateConflict[OperationResponse]("Comparison replay reservation has expired."))
+          } yield response
+        case "Reserved" =>
+          val updated = current.copy(
+            status = ComparisonReplayReservationStatus("Consumed"),
+            observationReference = Some(reference)
+          )
+          for {
+            patch <- exec_from(ComparisonReplayReservationUpdate.createC(Record.dataAuto(
+              "status" -> "Consumed",
+              "observationReference" -> reference.value
+            )))
+            _ <- entity_update(current.id, patch)
+          } yield _response(updated)
+        case "Consumed" if current.observationReference.contains(reference) =>
+          exec_pure(_response(current))
+        case "Consumed" =>
+          exec_from(Consequence.stateConflict("Comparison replay reservation is already consumed with different observation evidence."))
+        case status =>
+          exec_from(Consequence.stateConflict(s"Comparison replay reservation in status '$status' cannot be consumed."))
+      }
+    } yield response
+
+  private def _response(value: ComparisonReplayReservation): OperationResponse =
+    OperationResponse(Record.dataAuto("id" -> value.id.value, "status" -> value.status.value))
+}
+
+private final case class CancelComparisonReplayActionCallImpl(
+  core: ActionCall.Core,
+  override val action: ExperimentComponent.ExperimentManagementService.CancelComparisonReplay
+) extends ExperimentComponent.ExperimentManagementService.CancelComparisonReplayActionCall
+    with ExperimentActionSupport {
+  protected def build_Program: ExecUowM[OperationResponse] =
+    for {
+      id <- exec_from(required_entity_id(action.record, "reservationId"))
+      reference <- exec_from(ComparisonReplayReservationSupport.optionalOpaqueReference(action.record, "cancellationEvidenceReference"))
+      reservation <- entity_load_option_internal[ComparisonReplayReservation](id)
+      current <- exec_from(reservation.map(Consequence.success).getOrElse(
+        Consequence.entityNotFound(s"Comparison replay reservation '$id' does not exist.")
+      ))
+      response <- current.status.value match {
+        case "Reserved" if !current.expiresAt.isAfter(execution_clock.instant()) =>
+          for {
+            patch <- exec_from(ComparisonReplayReservationUpdate.createC(Record.dataAuto("status" -> "Expired")))
+            _ <- entity_update(current.id, patch)
+            response <- exec_from(Consequence.stateConflict[OperationResponse]("Comparison replay reservation has expired."))
+          } yield response
+        case "Reserved" =>
+          val updated = current.copy(
+            status = ComparisonReplayReservationStatus("Cancelled"),
+            cancellationEvidenceReference = reference
+          )
+          for {
+            patch <- exec_from(ComparisonReplayReservationUpdate.createC(Record.dataAuto(
+              "status" -> "Cancelled",
+              "cancellationEvidenceReference" -> reference.map(_.value)
+            )))
+            _ <- entity_update(current.id, patch)
+          } yield _response(updated)
+        case "Cancelled" if current.cancellationEvidenceReference == reference =>
+          exec_pure(_response(current))
+        case "Cancelled" =>
+          exec_from(Consequence.stateConflict("Comparison replay reservation is already cancelled with different evidence."))
+        case status =>
+          exec_from(Consequence.stateConflict(s"Comparison replay reservation in status '$status' cannot be cancelled."))
+      }
+    } yield response
+
+  private def _response(value: ComparisonReplayReservation): OperationResponse =
+    OperationResponse(Record.dataAuto("id" -> value.id.value, "status" -> value.status.value))
+}
+
+private final case class ExpireComparisonReplayReservationsActionCallImpl(
+  core: ActionCall.Core,
+  override val action: ExperimentComponent.ExperimentManagementService.ExpireComparisonReplayReservations
+) extends ExperimentComponent.ExperimentManagementService.ExpireComparisonReplayReservationsActionCall
+    with ExperimentActionSupport {
+  protected def build_Program: ExecUowM[OperationResponse] =
+    for {
+      reservations <- all_reservations
+      expired <- expire_reservations(reservations, execution_clock.instant())
+      count = reservations.zip(expired).count { case (before, after) =>
+        before.status.value == "Reserved" && after.status.value == "Expired"
+      }
+    } yield OperationResponse(Record.dataAuto("expiredCount" -> count))
+}
+
+private final case class ListComparisonReplayReservationsActionCallImpl(
+  core: ActionCall.Core,
+  override val action: ExperimentComponent.ExperimentManagementService.ListComparisonReplayReservations
+) extends ExperimentComponent.ExperimentManagementService.ListComparisonReplayReservationsActionCall
+    with ExperimentActionSupport {
+  protected def build_Program: ExecUowM[OperationResponse] =
+    for {
+      reservations <- all_reservations
+      runid = action.record.getAs[EntityId]("experimentRunId")
+      status = action.record.getString("status")
+      selected = page(reservations
+        .filter(x => runid.forall(_ == x.experimentRunId))
+        .filter(x => status.forall(_ == x.status.value))
+        .sortBy(x => (x.experimentRunId.value, x.reservedAt.toString, x.reservationKey.value)), action.record)
+    } yield OperationResponse(Record.dataAuto("items" -> selected.map(reservation_record)))
+}
+
+private object ComparisonReplayReservationSupport {
+  private val _opaque_reference = "[a-z][a-z0-9+.-]*://[A-Za-z0-9._~/-]{1,255}".r
+
+  def policy(core: ActionCall.Core): Consequence[ComparisonReplaySchedulerConfig] =
+    core.component.flatMap(_.subsystem)
+      .map(value => ComparisonReplaySchedulerConfig.fromConfiguration(value.configuration))
+      .getOrElse(Consequence.serviceUnavailable("Experiment subsystem is not initialized."))
+
+  def requiredOpaqueReference(record: Record, name: String): Consequence[ExperimentEvidenceReference] =
+    record.getString(name).map(_.trim).filter(_.nonEmpty)
+      .map(_opaque_reference_c)
+      .getOrElse(Consequence.failRecordNotFound(name, record))
+
+  def optionalOpaqueReference(record: Record, name: String): Consequence[Option[ExperimentEvidenceReference]] =
+    record.getString(name).map(_.trim).filter(_.nonEmpty) match {
+      case Some(value) => _opaque_reference_c(value).map(Some.apply)
+      case None => Consequence.success(None)
+    }
+
+  private def _opaque_reference_c(value: String): Consequence[ExperimentEvidenceReference] =
+    if (_opaque_reference.matches(value)) Consequence.success(ExperimentEvidenceReference(value))
+    else Consequence.configurationInvalid(s"Comparison replay evidence reference is not an opaque safe reference: $value")
 }
 
 private final case class CompleteExperimentRunActionCallImpl(
