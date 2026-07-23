@@ -7,6 +7,7 @@ import org.goldenport.cncf.action.{ActionCall, FunctionalActionCall}
 import org.goldenport.cncf.component.{Component, ComponentCreate, ComponentId}
 import org.goldenport.cncf.directive.Query
 import org.goldenport.cncf.entity.{EntityQuery, EntitySearchScope}
+import org.goldenport.cncf.spi.{SpiProvider, SpiProviderComponent}
 import org.goldenport.cncf.unitofwork.ExecUowM
 import org.goldenport.protocol.operation.OperationResponse
 import org.goldenport.record.Record
@@ -16,10 +17,11 @@ import org.simplemodeling.textus.experiment.entity.{ComparisonReplayReservation,
 import org.simplemodeling.textus.experiment.entity.create.{ComparisonReplayReservation as ComparisonReplayReservationCreate, Experiment as ExperimentCreate, ExperimentArm as ExperimentArmCreate, ExperimentObservation as ExperimentObservationCreate, ExperimentRun as ExperimentRunCreate}
 import org.simplemodeling.textus.experiment.entity.update.{ComparisonReplayReservation as ComparisonReplayReservationUpdate, Experiment as ExperimentUpdate, ExperimentRun as ExperimentRunUpdate}
 import org.simplemodeling.textus.experiment.datatype.{ComparisonReplayReservationStatus, ExperimentEvidenceReference, ExperimentRunStatus, ExperimentStatus}
+import org.simplemodeling.textus.experiment.evaluation.OfflineExperimentEvaluationSinkProvider
 
 /*
  * @since   Jul. 21, 2026
- * @version Jul. 23, 2026
+ * @version Jul. 24, 2026
  * @author  ASAMI, Tomoharu
  */
 final class ComponentFactory extends Component.BundleFactory {
@@ -47,9 +49,12 @@ abstract class ExperimentParticipantFactoryBase extends ExperimentComponent.Fact
   override val entity: ExperimentComponent.EntityServiceFactory = DefaultEntityServiceFactory()
 }
 
-final class ExperimentPrimaryComponent extends ExperimentComponent {
+final class ExperimentPrimaryComponent extends ExperimentComponent with SpiProviderComponent {
   override def mcpReadyServices: Set[String] =
     Set.empty
+
+  def spiProviders: Vector[SpiProvider[?]] =
+    Vector(OfflineExperimentEvaluationSinkProvider())
 }
 
 object ExperimentPrimaryFactory extends ExperimentParticipantFactoryBase with Component.PrimaryComponentFactory {

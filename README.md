@@ -45,6 +45,22 @@ The assembled component depends on `textus-corpus`. Corpus revision and case
 references are validated through its semantic operations rather than by
 importing Corpus implementation classes.
 
+## Operation Evaluation Development Adapter
+
+`OfflineExperimentEvaluationSinkAdapter` implements CNCF's standard
+`ExperimentEvaluationSink` for bounded offline and development verification.
+It retains automatic operation start/terminal facts and
+application-submitted observations in delivery order, deduplicates exact
+fact-ID retries, rejects replacement content for an existing fact ID, and
+reports capacity saturation through the standard delivery limitation.
+
+The primary component exposes this adapter through the standard SPI provider
+contract. Its provider accepts only an absent or explicit `offline` mode. The
+adapter is deliberately in-memory and non-persistent. Mapping captured
+observations into the component's persistent `record-observation` lifecycle,
+measurement/evidence conventions, retention, and production provider
+activation remain separately owned follow-up work.
+
 ## Development
 
 - artifact: `textus-experiment`
