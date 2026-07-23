@@ -144,12 +144,17 @@ final class ComponentFactorySpec extends AnyWordSpec with Matchers with GivenWhe
       summary.getInt("escalatedCount") shouldBe Some(1)
       summary.getInt("rejectedCount") shouldBe Some(0)
 
-      And("the run can be completed once and no new observation may be appended")
+      And("the completed run retains its immutable summary and accepts no new observation")
       _record(_operation(component, "completeExperimentRun",
         "experimentRunId" -> runid,
         "status" -> "Completed",
         "completionEvidenceReference" -> "experiment-evidence://run-001/summary"
       )).getString("status") shouldBe Some("Completed")
+      val completedsummary = _record(_operation(component, "summarizeExperimentRun", "experimentRunId" -> runid))
+      completedsummary.getInt("observationCount") shouldBe Some(3)
+      completedsummary.getInt("acceptedCount") shouldBe Some(1)
+      completedsummary.getInt("repairedCount") shouldBe Some(1)
+      completedsummary.getInt("escalatedCount") shouldBe Some(1)
       val lateobservation = _operation(component, "recordObservation",
         "experimentRunId" -> runid,
         "experimentArmId" -> baselineid,
