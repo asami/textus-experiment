@@ -21,7 +21,7 @@ import org.simplemodeling.textus.experiment.impl.{ComponentFactory, ExperimentPr
 
 /*
  * @since   Jul. 21, 2026
- * @version Jul. 23, 2026
+ * @version Jul. 27, 2026
  * @author  ASAMI, Tomoharu
  */
 final class ComponentFactorySpec extends AnyWordSpec with Matchers with GivenWhenThen {
@@ -423,7 +423,7 @@ final class ComponentFactorySpec extends AnyWordSpec with Matchers with GivenWhe
     ))
     val subsystem = new Subsystem(
       name = "textus-experiment-spec",
-      scopeContext = Some(scope),
+      scopecontext = Some(scope),
       configuration = resolvedconfiguration
     )
     val bundle = new ComponentFactory().create(ComponentCreate(subsystem, ComponentOrigin.Main))

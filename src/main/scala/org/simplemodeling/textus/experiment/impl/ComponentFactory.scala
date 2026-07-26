@@ -21,7 +21,7 @@ import org.simplemodeling.textus.experiment.evaluation.OfflineExperimentEvaluati
 
 /*
  * @since   Jul. 21, 2026
- * @version Jul. 24, 2026
+ * @version Jul. 27, 2026
  * @author  ASAMI, Tomoharu
  */
 final class ComponentFactory extends Component.BundleFactory {
@@ -148,7 +148,7 @@ private trait ExperimentActionSupport {
   protected final def required_entity_id(record: Record, name: String): Consequence[EntityId] =
     record.getAs[EntityId](name)
       .map(Consequence.success)
-      .getOrElse(Consequence.failRecordNotFound(name, record))
+      .getOrElse(Consequence.recordNotFound(name, record))
 
   protected final def page[A](items: Vector[A], record: Record): Vector[A] = {
     val offset = record.getInt("offset").getOrElse(0).max(0)
@@ -568,7 +568,7 @@ private object ComparisonReplayReservationSupport {
   def requiredOpaqueReference(record: Record, name: String): Consequence[ExperimentEvidenceReference] =
     record.getString(name).map(_.trim).filter(_.nonEmpty)
       .map(_opaque_reference_c)
-      .getOrElse(Consequence.failRecordNotFound(name, record))
+      .getOrElse(Consequence.recordNotFound(name, record))
 
   def optionalOpaqueReference(record: Record, name: String): Consequence[Option[ExperimentEvidenceReference]] =
     record.getString(name).map(_.trim).filter(_.nonEmpty) match {
@@ -593,7 +593,7 @@ private final case class CompleteExperimentRunActionCallImpl(
       id <- exec_from(required_entity_id(action.record, "experimentRunId"))
       requested <- exec_from(action.record.getString("status")
         .map(Consequence.success)
-        .getOrElse(Consequence.failRecordNotFound("status", action.record)))
+        .getOrElse(Consequence.recordNotFound("status", action.record)))
       _ <- if (_terminal_statuses.contains(requested)) exec_pure(())
         else exec_from(Consequence.operationInvalid(
           s"Terminal experiment run status must be one of ${_terminal_statuses.toVector.sorted.mkString(", ")}."
