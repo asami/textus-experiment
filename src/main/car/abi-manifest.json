@@ -1,0 +1,913 @@
+{
+  "format" : "cozy.car.abi-manifest.v2",
+  "component" : {
+    "namespace" : "org.simplemodeling.textus",
+    "id" : "Experiment",
+    "version" : "0.1.1-SNAPSHOT"
+  },
+  "abi" : {
+    "version" : 1,
+    "exports" : {
+      "components" : [ {
+        "namespace" : "org.simplemodeling.textus",
+        "id" : "Experiment"
+      } ],
+      "services" : [ {
+        "name" : "ExperimentManagement"
+      } ],
+      "operations" : [ {
+        "service" : "ExperimentManagement",
+        "name" : "defineExperiment",
+        "kind" : "COMMAND",
+        "input" : "DefineExperiment",
+        "output" : "DefineExperimentResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "defineExperimentArm",
+        "kind" : "COMMAND",
+        "input" : "DefineExperimentArm",
+        "output" : "DefineExperimentArmResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "activateExperiment",
+        "kind" : "COMMAND",
+        "input" : "ActivateExperiment",
+        "output" : "ActivateExperimentResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "startExperiment",
+        "kind" : "COMMAND",
+        "input" : "StartExperiment",
+        "output" : "StartExperimentResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "reserveComparisonReplay",
+        "kind" : "COMMAND",
+        "input" : "ReserveComparisonReplay",
+        "output" : "ReserveComparisonReplayResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "consumeComparisonReplay",
+        "kind" : "COMMAND",
+        "input" : "ConsumeComparisonReplay",
+        "output" : "ConsumeComparisonReplayResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "cancelComparisonReplay",
+        "kind" : "COMMAND",
+        "input" : "CancelComparisonReplay",
+        "output" : "CancelComparisonReplayResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "expireComparisonReplayReservations",
+        "kind" : "COMMAND",
+        "input" : "ExpireComparisonReplayReservations",
+        "output" : "ExpireComparisonReplayReservationsResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "listComparisonReplayReservations",
+        "kind" : "QUERY",
+        "input" : "ListComparisonReplayReservations",
+        "output" : "ListComparisonReplayReservationsResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "completeExperimentRun",
+        "kind" : "COMMAND",
+        "input" : "CompleteExperimentRun",
+        "output" : "CompleteExperimentRunResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "recordObservation",
+        "kind" : "COMMAND",
+        "input" : "RecordObservation",
+        "output" : "RecordObservationResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "listExperimentRuns",
+        "kind" : "QUERY",
+        "input" : "ListExperimentRuns",
+        "output" : "ListExperimentRunsResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "listExperimentObservations",
+        "kind" : "QUERY",
+        "input" : "ListExperimentObservations",
+        "output" : "ListExperimentObservationsResult"
+      }, {
+        "service" : "ExperimentManagement",
+        "name" : "summarizeExperimentRun",
+        "kind" : "QUERY",
+        "input" : "SummarizeExperimentRun",
+        "output" : "SummarizeExperimentRunResult"
+      } ],
+      "types" : [ {
+        "name" : "ExperimentKey",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "AcceptanceOperation",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentStatus",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentArmKey",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExecutionPlanReference",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentRunStatus",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentRunReference",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ComparisonReplayReservationKey",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ComparisonReplayReservationStatus",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentEvidenceReference",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentOutcome",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentMetricReference",
+        "kind" : "datatype",
+        "fields" : [ {
+          "name" : "value",
+          "type" : "string",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "DefineExperiment",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "name",
+          "type" : "name",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentKey",
+          "type" : "ExperimentKey",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "corpusRevisionId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "acceptanceOperation",
+          "type" : "AcceptanceOperation",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "description",
+          "type" : "description",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "ActivateExperiment",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "DefineExperimentArm",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "armKey",
+          "type" : "ExperimentArmKey",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "name",
+          "type" : "name",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "executionPlanReference",
+          "type" : "ExecutionPlanReference",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "StartExperiment",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "runReference",
+          "type" : "ExperimentRunReference",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ReserveComparisonReplay",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "reservationKey",
+          "type" : "ComparisonReplayReservationKey",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "replayCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "budgetMicrounits",
+          "type" : "long",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ConsumeComparisonReplay",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "reservationId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "observationReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "CancelComparisonReplay",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "reservationId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "cancellationEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "ExpireComparisonReplayReservations",
+        "kind" : "value",
+        "fields" : [ ]
+      }, {
+        "name" : "ListComparisonReplayReservations",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "status",
+          "type" : "ComparisonReplayReservationStatus",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "offset",
+          "type" : "int",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "limit",
+          "type" : "int",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "CompleteExperimentRun",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ExperimentRunStatus",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "completionEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "RecordObservation",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentArmId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "corpusCaseId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "outcome",
+          "type" : "ExperimentOutcome",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "acceptanceEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "executionEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "metricReference",
+          "type" : "ExperimentMetricReference",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "ListExperimentRuns",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentId",
+          "type" : "entityid",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "status",
+          "type" : "ExperimentRunStatus",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "offset",
+          "type" : "int",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "limit",
+          "type" : "int",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "ListExperimentObservations",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentArmId",
+          "type" : "entityid",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "outcome",
+          "type" : "ExperimentOutcome",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "offset",
+          "type" : "int",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "limit",
+          "type" : "int",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "SummarizeExperimentRun",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "DefineExperimentResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentKey",
+          "type" : "ExperimentKey",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "name",
+          "type" : "name",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ActivateExperimentResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ExperimentStatus",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "DefineExperimentArmResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "armKey",
+          "type" : "ExperimentArmKey",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "StartExperimentResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "runReference",
+          "type" : "ExperimentRunReference",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ReserveComparisonReplayResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ComparisonReplayReservationStatus",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "expiresAt",
+          "type" : "instant",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "replayCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "budgetMicrounits",
+          "type" : "long",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ConsumeComparisonReplayResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ComparisonReplayReservationStatus",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "CancelComparisonReplayResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ComparisonReplayReservationStatus",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExpireComparisonReplayReservationsResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "expiredCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ListComparisonReplayReservationsResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "items",
+          "type" : "ComparisonReplayReservation",
+          "multiplicity" : "*",
+          "required" : false
+        } ]
+      }, {
+        "name" : "CompleteExperimentRunResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ExperimentRunStatus",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "RecordObservationResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ListExperimentRunsResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "items",
+          "type" : "ExperimentRun",
+          "multiplicity" : "*",
+          "required" : false
+        } ]
+      }, {
+        "name" : "ListExperimentObservationsResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "items",
+          "type" : "ExperimentObservation",
+          "multiplicity" : "*",
+          "required" : false
+        } ]
+      }, {
+        "name" : "SummarizeExperimentRunResult",
+        "kind" : "value",
+        "fields" : [ {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "observationCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "acceptedCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "repairedCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "confirmedCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "escalatedCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "rejectedCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "failedCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      } ],
+      "entities" : [ {
+        "name" : "Experiment",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentKey",
+          "type" : "ExperimentKey",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "name",
+          "type" : "name",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "corpusRevisionId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "acceptanceOperation",
+          "type" : "AcceptanceOperation",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "description",
+          "type" : "description",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "status",
+          "type" : "ExperimentStatus",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentArm",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "armKey",
+          "type" : "ExperimentArmKey",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "name",
+          "type" : "name",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "executionPlanReference",
+          "type" : "ExecutionPlanReference",
+          "multiplicity" : "1",
+          "required" : true
+        } ]
+      }, {
+        "name" : "ExperimentRun",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "corpusRevisionId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ExperimentRunStatus",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "runReference",
+          "type" : "ExperimentRunReference",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "completionEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "ComparisonReplayReservation",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "reservationKey",
+          "type" : "ComparisonReplayReservationKey",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "replayCount",
+          "type" : "int",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "budgetMicrounits",
+          "type" : "long",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "status",
+          "type" : "ComparisonReplayReservationStatus",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "reservedAt",
+          "type" : "instant",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "expiresAt",
+          "type" : "instant",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "observationReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "cancellationEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      }, {
+        "name" : "ExperimentObservation",
+        "fields" : [ {
+          "name" : "id",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentRunId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "experimentArmId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "corpusCaseId",
+          "type" : "entityid",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "outcome",
+          "type" : "ExperimentOutcome",
+          "multiplicity" : "1",
+          "required" : true
+        }, {
+          "name" : "acceptanceEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "executionEvidenceReference",
+          "type" : "ExperimentEvidenceReference",
+          "multiplicity" : "?",
+          "required" : false
+        }, {
+          "name" : "metricReference",
+          "type" : "ExperimentMetricReference",
+          "multiplicity" : "?",
+          "required" : false
+        } ]
+      } ]
+    },
+    "dependencies" : [ ]
+  }
+}

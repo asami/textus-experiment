@@ -3,21 +3,27 @@ package org.simplemodeling.textus.experiment.evaluation
 import java.time.{Duration, Instant}
 
 import org.goldenport.Consequence
-import org.goldenport.cncf.component.Component
-import org.goldenport.cncf.context.ExecutionContext
+import org.goldenport.cncf.component.{Component, ComponentCreate, ComponentId, ComponentInit, ComponentInstanceId, ComponentOrigin}
+import org.goldenport.cncf.context.{DataStoreContext, EntityStoreContext, ExecutionContext, ScopeContext, ScopeKind}
+import org.goldenport.cncf.datastore.{DataStore, DataStoreSpace}
+import org.goldenport.cncf.entity.EntityStoreSpace
 import org.goldenport.cncf.operation.evaluation.{CorpusCandidateFact, CorpusCaseReference, CorpusEvaluationCorrelation, CorpusRevisionReference, ExperimentArmReference, ExperimentEvaluationCorrelation, ExperimentObservationFact, ExperimentReference, ExperimentRunReference, OperationEvaluationAttemptId, OperationEvaluationCorrelation, OperationEvaluationDeliveryStatus, OperationEvaluationExecutionId, OperationEvaluationFactId, OperationEvaluationFactSource, OperationEvaluationLabel, OperationEvaluationLimitationKind, OperationEvaluationMeasurement, OperationEvaluationOperationIdentity, OperationEvaluationOutcome, OperationEvaluationStartFact, OperationEvaluationTerminalFact, OperationEvaluationText}
 import org.goldenport.cncf.spi.{SpiResolver, SpiSelection}
 import org.goldenport.cncf.spi.evaluation.{DeterministicCorpusEvaluationSink, ExperimentEvaluationSink, ExperimentEvaluationSinkSocket}
+import org.goldenport.cncf.subsystem.Subsystem
+import org.goldenport.configuration.{Configuration, ConfigurationTrace, ResolvedConfiguration}
+import org.goldenport.protocol.Protocol
 import org.goldenport.schema.DataConfidentiality
 import org.scalacheck.{Gen, Prop, Test}
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.simplemodeling.textus.experiment.impl.ExperimentPrimaryComponent
+import org.simplemodeling.textus.experiment.ExperimentComponent
+import org.simplemodeling.textus.experiment.impl.{ComponentFactory, ExperimentPrimaryComponent}
 
 /*
  * @since   Jul. 24, 2026
- * @version Jul. 24, 2026
+ * @version Aug. 14, 2026
  * @author  ASAMI, Tomoharu
  */
 final class OfflineExperimentEvaluationSinkAdapterSpec extends AnyWordSpec with Matchers with GivenWhenThen {
@@ -124,8 +130,12 @@ final class OfflineExperimentEvaluationSinkAdapterSpec extends AnyWordSpec with 
     "resolve through the standard Experiment evaluation SPI provider contract" in {
       Given("the Textus-owned offline provider")
       given ExecutionContext = ExecutionContext.create()
-      val providercomponent = new ExperimentPrimaryComponent()
-      val consumer = ExperimentConsumerComponent(SpiSelection(mode = Some("offline")))
+      val (providercomponent, subsystem) = _provider_component()
+      val consumer = _consumer(
+        subsystem,
+        SpiSelection(mode = Some("offline")),
+        "org.simplemodeling.textus.experiment.evaluation.OfflineExperimentConsumer"
+      )
 
       When("the CNCF SPI contract selects and materializes the provider")
       val resolution = SpiResolver.resolve(Vector(providercomponent, consumer))
@@ -135,16 +145,27 @@ final class OfflineExperimentEvaluationSinkAdapterSpec extends AnyWordSpec with 
       resolution shouldBe a[Consequence.Success[_]]
       consumer.isSpiInstalled shouldBe true
       sink.sinkIdentityOption.flatMap(_.toRecord.getString("contract")) shouldBe Some("experiment-evaluation-sink")
-      sink.sinkIdentityOption.flatMap(_.toRecord.getString("socketComponent")) shouldBe Some("experimentconsumercomponent")
+      sink.sinkIdentityOption.flatMap(_.toRecord.getString("socketComponent")) shouldBe Some("org.simplemodeling.textus.experiment.evaluation.offlineexperimentconsumer")
+
+      And("the emitted provider identity is the generated Experiment component identity")
+      sink.sinkIdentityOption.flatMap(_.toRecord.getString("providerComponent")) shouldBe Some("org.simplemodeling.textus.experiment")
 
       And("an absent mode retains the offline development default")
-      val defaultconsumer = ExperimentConsumerComponent(SpiSelection())
+      val defaultconsumer = _consumer(
+        subsystem,
+        SpiSelection(),
+        "org.simplemodeling.textus.experiment.evaluation.DefaultExperimentConsumer"
+      )
       val defaultresolution = SpiResolver.resolve(Vector(providercomponent, defaultconsumer))
       defaultresolution shouldBe a[Consequence.Success[_]]
       defaultconsumer.isSpiInstalled shouldBe true
 
       And("an explicit non-offline mode leaves the optional socket uninstalled")
-      val incompatible = ExperimentConsumerComponent(SpiSelection(mode = Some("production")))
+      val incompatible = _consumer(
+        subsystem,
+        SpiSelection(mode = Some("production")),
+        "org.simplemodeling.textus.experiment.evaluation.IncompatibleExperimentConsumer"
+      )
       val rejected = SpiResolver.resolve(Vector(providercomponent, incompatible))
       rejected shouldBe a[Consequence.Success[_]]
       incompatible.isSpiInstalled shouldBe false
@@ -157,6 +178,48 @@ final class OfflineExperimentEvaluationSinkAdapterSpec extends AnyWordSpec with 
     selection: SpiSelection
   ) extends Component with ExperimentEvaluationSinkSocket {
     override def spiSelection: SpiSelection = selection
+  }
+
+  private def _provider_component(): (ExperimentPrimaryComponent, Subsystem) = {
+    val configuration = ResolvedConfiguration(Configuration.empty, ConfigurationTrace.empty)
+    val base = ExecutionContext.create()
+    val datastorespace = new DataStoreSpace().addDataStore(DataStore.inMemorySearchable())
+    val entitystorespace = EntityStoreSpace.create(configuration)
+    val scope = ScopeContext.Instance(ScopeContext.Core(
+      kind = ScopeKind.Subsystem,
+      name = "textus-experiment-evaluation-sink-spec",
+      parent = None,
+      observabilityContext = base.observability,
+      httpDriverOption = None,
+      datastore = Some(DataStoreContext(datastorespace)),
+      entitystore = Some(EntityStoreContext(entitystorespace))
+    ))
+    val subsystem = new Subsystem(
+      name = "textus-experiment-evaluation-sink-spec",
+      scopecontext = Some(scope),
+      configuration = configuration
+    )
+    val bundle = new ComponentFactory().create(ComponentCreate(subsystem, ComponentOrigin.Main))
+    subsystem.add(bundle.participants)
+    (bundle.primary.asInstanceOf[ExperimentPrimaryComponent], subsystem)
+  }
+
+  private def _consumer(
+    subsystem: Subsystem,
+    selection: SpiSelection,
+    componentname: String
+  ): ExperimentConsumerComponent = {
+    val consumer = ExperimentConsumerComponent(selection)
+    val componentid = ComponentId(componentname)
+    val core = Component.Core.create(
+      name = componentid.name,
+      componentId = componentid,
+      instanceId = ComponentInstanceId.default(componentid),
+      protocol = Protocol.empty,
+      jobEngine = subsystem.jobEngine
+    )
+    consumer.initialize(ComponentInit(subsystem, core, ComponentOrigin.Builtin))
+    consumer
   }
 
   private def _correlation(entropy: String): OperationEvaluationCorrelation = {

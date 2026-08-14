@@ -64,8 +64,9 @@ activation remain separately owned follow-up work.
 ## Development
 
 - artifact: `textus-experiment`
+- component: `org.simplemodeling.textus.Experiment`
 - package: `org.simplemodeling.textus.experiment`
-- version: `0.1.0-SNAPSHOT`
+- version: `0.1.1-SNAPSHOT`
 
 Run `sbt cozyGenerate compile` to regenerate and compile the CAR. Generated
 Scala sources are under `target/scala-3.3.8/src_managed/main/scala`.

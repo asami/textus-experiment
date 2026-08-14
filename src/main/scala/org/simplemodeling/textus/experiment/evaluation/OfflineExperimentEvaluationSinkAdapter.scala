@@ -7,6 +7,7 @@ import org.goldenport.cncf.context.ExecutionContext
 import org.goldenport.cncf.operation.evaluation.{ExperimentObservationFact, OperationEvaluationDeliveryResult, OperationEvaluationDeliveryStatus, OperationEvaluationFact, OperationEvaluationFactId, OperationEvaluationLimitation, OperationEvaluationLimitationKind, OperationEvaluationSinkIdentity, OperationEvaluationStartFact, OperationEvaluationTerminalFact}
 import org.goldenport.cncf.spi.{SpiContract, SpiProvider, SpiSelection}
 import org.goldenport.cncf.spi.evaluation.ExperimentEvaluationSink
+import org.simplemodeling.textus.experiment.ExperimentComponent
 
 /*
  * Bounded, non-persistent Experiment evaluation sink for development and
@@ -14,7 +15,7 @@ import org.goldenport.cncf.spi.evaluation.ExperimentEvaluationSink
  * persistent provider.
  *
  * @since   Jul. 24, 2026
- * @version Jul. 24, 2026
+ * @version Aug. 14, 2026
  * @author  ASAMI, Tomoharu
  */
 final class OfflineExperimentEvaluationSinkAdapter private (
@@ -73,8 +74,8 @@ final class OfflineExperimentEvaluationSinkAdapter private (
 
 object OfflineExperimentEvaluationSinkAdapter {
   val DEFAULT_MAXIMUM_FACT_COUNT: Int = 4096
-  val PROVIDER_COMPONENT = "textus-experiment"
-  val PROVIDER_INSTANCE = "offline"
+  val PROVIDER_COMPONENT: String = ExperimentComponent.name
+  val PROVIDER_INSTANCE: String = "offline"
 
   def createC(
     socketcomponent: String,
