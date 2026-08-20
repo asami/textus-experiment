@@ -1,9 +1,9 @@
 subsystem: textus-experiment
-version: 0.1.1-SNAPSHOT
+version: 0.1.1
 components:
   - namespace: org.simplemodeling.textus
     id: Experiment
-    version: 0.1.1-SNAPSHOT
+    version: 0.1.1
   - namespace: org.simplemodeling.textus
     id: Corpus
-    version: 0.1.1-SNAPSHOT
+    version: 0.1.1

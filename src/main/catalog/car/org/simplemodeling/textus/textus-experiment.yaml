@@ -1,0 +1,27 @@
+schemaVersion: 2
+kind: car
+namespace: org.simplemodeling.textus
+id: Experiment
+artifactId: textus-experiment
+recommended: 0.1.1
+latestStable: 0.1.1
+status: active
+aliases: []
+tags: []
+terms: []
+versions:
+  - version: 0.1.1
+    channel: stable
+    status: active
+    component: org.simplemodeling.textus.Experiment
+    publishedAt: 2026-08-21T02:56:48.673824+09:00
+    file: repository/car/org/simplemodeling/textus/textus-experiment/0.1.1/textus-experiment-0.1.1.car
+    runtime:
+      cncf:
+        minimum: 0.5.2
+        excluded: []
+        tested:
+          - 0.5.2
+    checksum:
+      sha256: e7423a019308b27d31755166971a9bbfad1c7fa3a05dd7c85a4fbbbcf685f919
+    integrityKey: org.simplemodeling.textus:textus-experiment:0.1.1@sha256:e7423a019308b27d31755166971a9bbfad1c7fa3a05dd7c85a4fbbbcf685f919
