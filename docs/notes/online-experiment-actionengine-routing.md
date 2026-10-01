@@ -65,3 +65,13 @@ Display interactions and Display Mutations return/preserve the Display Instance/
 This allows Experiment analysis to correlate which UI variant was actually shown with edit/save/delete/validation/cancel behavior, Business Operations, AI-backed calculations and final business outcomes. If AI is invoked later, AI Audit supplies detailed evidence through the same Experiment correlation.
 
 An Experiment Arm can therefore describe an experience/execution plan containing presentation variant, backend Operation plan and optional AI strategy, rather than being limited to one backend parameter.
+
+## Multi-arm first model
+
+The primary online model is Multi-Arm Experiment, not binary A/B testing. An Experiment owns N Arms; A/B testing is the N=2 specialization.
+
+Assignment policy is decomposed into Allocation Policy and Stickiness Policy. Allocation determines the distribution among eligible Arms; Stickiness determines whether a request/session/user/device/entity remains on an assigned Arm. This separation allows fixed/uniform/weighted allocation initially and later adaptive allocation such as Thompson Sampling or UCB without changing CNCF ActionEngine or Arm execution semantics.
+
+Observation/Measurement and Reward Policy are separate from allocation. Adaptive policies may update their allocation state from admitted reward evidence. Reward is application-defined and can represent downstream business success, validation/admission outcome, human correction, latency/cost-bounded success, or another meaningful outcome rather than only clicks.
+
+An Arm remains an execution/experience plan. It does not know whether assignment came from fixed A/B allocation, a weighted multi-arm policy or an adaptive bandit.
