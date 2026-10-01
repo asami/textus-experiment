@@ -55,3 +55,13 @@ An Arm may represent:
 - deterministic versus AI-backed execution.
 
 AI-backed execution independently produces CNCF AI Audit evidence and inherits Experiment correlation from ExecutionContext.
+
+## Display/UI experiment integration
+
+The same online assignment can span presentation and backend execution. CNCF assigns the subject to an Arm before Display Model delivery. Display Model carries a client-safe assigned Arm/variant and a Display Instance/correlation reference. UI runtimes such as TFAF use the value only to choose the assigned presentation; they do not perform assignment.
+
+Display interactions and Display Mutations return/preserve the Display Instance/correlation reference. CNCF restores the authoritative Experiment/Run/Arm and records the resulting mutation and later Operation outcomes against that Arm.
+
+This allows Experiment analysis to correlate which UI variant was actually shown with edit/save/delete/validation/cancel behavior, Business Operations, AI-backed calculations and final business outcomes. If AI is invoked later, AI Audit supplies detailed evidence through the same Experiment correlation.
+
+An Experiment Arm can therefore describe an experience/execution plan containing presentation variant, backend Operation plan and optional AI strategy, rather than being limited to one backend parameter.
