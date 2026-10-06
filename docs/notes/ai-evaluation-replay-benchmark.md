@@ -15,7 +15,7 @@ textus-experiment is the center of the evaluation concept and owns Experiment, A
 Related responsibilities are:
 
 - textus-ai-core / AI Runtime: record AI execution input, output, engine, parameters, execution context, and audit references.
-- textus-corpus: manage reusable EvaluationCase definitions and corpus membership.
+- textus-corpus: manage reusable EvaluationCase definitions, corpus membership, and restoration of the execution environment required to replay a case.
 - sm-workflow: provide real task classes such as Implementation, Review, Planning, and their observable outcomes.
 - Judge engine: compare candidate outputs using a stronger Thinking Engine when semantic judgment is required.
 
@@ -111,6 +111,41 @@ Aggregated EvaluationRuns can produce a Task Class x Engine capability map, for 
 This data can later support an Engine Router: route work to the least expensive engine whose measured capability is sufficient for that task class and reasoning requirement.
 
 The goal is not "use local LLMs because they are cheap", but "measure their capability continuously and delegate only work they have demonstrated they can perform adequately."
+
+## Environment restoration boundary
+
+Replay requires not only the logical input but also the source environment that formed the task context. Environment restoration is a textus-corpus responsibility, not a textus-experiment responsibility.
+
+For the initial version, an EvaluationCase is eligible for replay only under a deliberately narrow condition:
+
+- one Git repository
+- the source state is immediately after a commit
+- the working tree is clean
+- the repository and exact commit are recorded
+
+This environment type can be treated as `GitCommitEnvironment`.
+
+textus-corpus restores the repository at the recorded commit and returns a restored execution environment. textus-experiment receives that environment and runs Arms in it. textus-experiment must not acquire its own Git checkout/snapshot machinery.
+
+Conceptually:
+
+```text
+EvaluationCase
+  repository
+  commit
+  executionRef
+        |
+        v
+textus-corpus.restore(case)
+        |
+        v
+RestoredEnvironment
+        |
+        v
+textus-experiment.run(case, environment, arm)
+```
+
+Do not solve working-tree diffs, multiple repositories, or external resource reconstruction in the initial design. They can later become additional environment types when concrete corpus requirements justify them.
 
 ## Initial scope
 
