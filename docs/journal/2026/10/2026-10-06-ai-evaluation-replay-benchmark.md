@@ -21,3 +21,14 @@ A long-term consequence is a Task Class x Engine capability map that can feed th
 For now this is recorded as a cross-component design. Do not create a phase until the contracts among EvaluationCase, EvaluationRun, audit references, outcomes, and evaluation policies are sufficiently stable.
 
 See: `docs/notes/ai-evaluation-replay-benchmark.md`.
+
+
+## Environment restoration boundary
+
+Replay also requires restoration of the source environment. This responsibility belongs to textus-corpus.
+
+The initial supported/eligible environment is intentionally limited to one Git repository at an exact committed state with a clean working tree (`GitCommitEnvironment`). The EvaluationCase records repository and commit; textus-corpus restores it and provides a `RestoredEnvironment`.
+
+textus-experiment only orchestrates EvaluationRuns and Arms against that restored environment. It must not introduce independent Git checkout, workspace snapshot, or source-copy machinery.
+
+Working-tree diffs, multi-repository environments, and external-resource reconstruction remain future extensions driven by concrete corpus needs.
